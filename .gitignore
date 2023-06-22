@@ -11,8 +11,13 @@ __pycache__/
 *.log
 bin/
 lib/
-.vscode/
 .DS_Store
+
+# VS Code debugger configuration
+startup.sh
+.vscode/
+.env
+
 # Code compiled by Cython:
 python/nanoroot/*.c
 python/nanoroot/*.cpp
