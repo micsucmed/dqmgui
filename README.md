@@ -477,8 +477,8 @@ cd ../
     `sudo yum -y install cmake`
   4. Python (3.7 >= Recommended version < 3.9)
     `sudo yum -y install python38`
-3. Edit the CMSSW version and the SCRAM arch of the cmssw_info script to matched the ones you just setup in your VM
-4. [Setup the new DQM GUI as you would in lxplus](#deployment-in-lxplus)
+3. [Setup the new DQM GUI as you would in lxplus](#deployment-in-lxplus)
+  * Remember to edit the CMSSW version and the SCRAM arch of the cmssw_info script inside the new DQM GUI repository, to matched the ones you just setup in your VM
 
 _Note: It is recommended to use the openstack VM if you are developing in Visual Studio Code. This way you can connect through remote ssh and setup a debugging environment_
 
