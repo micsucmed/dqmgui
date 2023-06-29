@@ -422,6 +422,7 @@ Copy desired file to local storage with a XRD redirector:
 
 # Running the DQM GUI locally
 
+## Deployment in lxplus
 The following instructions can be used to deploy a local version of the DQM GUI in lxplus:
 
 ``` bash
@@ -436,6 +437,52 @@ cd ../
 ./scripts/dqmgui.sh -p 8889
 ```
 
+## Deployment on openstack VM
+1. Create an instance on [openstack](https://openstack.cern.ch)
+  * It's recommended to create an instance of the same OS as P5 machines to simulate their environment (RHEL 8 at the moment)
+  * [CERN OpenStack Private Cloud Guide](https://clouddocs.web.cern.ch/)
+2. Install the new DQM GUI dependencies
+  1. [CVMFS](https://cvmfs.readthedocs.io/en/stable/cpt-quickstart.html) and CMSSW
+    * Add the CVMFS repository and install CVMFS run
+      ``` bash
+      sudo yum install https://ecsft.cern.ch/dist/cvmfs/cvmfs-release/cvmfs-release-latest.noarch.rpm
+      sudo yum install -y cvmfs
+      ```
+    * Configure AutoFS
+      `cvmfs_config setup`
+    * Create default.local
+      `mkdir -p /etc/cvmfs/default.local`
+    * Add the following lines to `default.local`
+      ``` bash
+      CVMFS_REPOSITORIES=cms.cern.ch
+      CVMFS_CLIENT_PROFILE=single
+      CVMFS_HTTP_PROXY=DIRECT
+      ```
+    * Verify the file system
+      `cvmfs_config probe`
+    * Setup CMSSW release (This should be done everytime you start a session on the VM or setup them up as startup commands in .bashrc)
+      ``` bash
+      source /cvmfs/cms.cern.ch/cmsset_default.sh
+      cmsrel CMSSW_13_0_9
+      cd CMSSW_13_0_9/src
+      cmsenv
+      ```
+  2. [C++](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/developing_c_and_cpp_applications_in_rhel_8/index#setting-up-to-develop-applications-using-c-and-cpp_setting-up-a-development-workstation)
+    ``` bash
+    yum group install "Development Tools"
+    yum install llvm-toolset
+    yum install gcc-gfortran
+    ```
+  3. CMAKE
+    `sudo yum -y install cmake`
+  4. Python (3.7 >= Recommended version < 3.9)
+    `sudo yum -y install python38`
+3. [Setup the new DQM GUI as you would in lxplus](#deployment-in-lxplus)
+
+_Note: It is recommended to use the openstack VM if you are developing in Visual Studio Code. This way you can connect through remote ssh and setup a debugging environment_
+
+4. [Setup Visual Studio Code debugger](https://code.visualstudio.com/docs/editor/debugging#:~:text=To%20bring%20up%20the%20Run,debugging%20commands%20and%20configuration%20settings.)
+  * You can get an example of some configuration files here: `/afs/cern.ch/user/m/msuccarm/public/vscode_debugger/*`
 
 # Random things
 
@@ -890,6 +937,14 @@ All Offline DQM ROOT files has to be stored in EOS in order for the new GUIs to 
 
 Having 200TB of storage will ensure that we can fit all previously accumulated DQM data as well as all new files from future data taking, for many years to come.
 
+* To copy new output root files to the EOS starage, configure a cronjob on lxplus to, access the offline DQMGUI machine `vocms0738`, and rsync the folders with eos. This can be done by creating a shell script with one or many rsync commands targeting the desired folders, for example:
+  * `rsync --ignore-existing -raz --progress <target_path_of_root_files_in_offline_machine> <target_EOS_directory> --log-file=<location_log_file_in_lxplus_area>`
+    * `/data/srv/state/dqmgui/offline/data/OfflineData/Commissioning2022/` could be a targeted folder in the offline machine `vocms0738`
+    * `/eos/cms/store/group/comm_dqm/DQMGUI_data/Commissioning2022/` could be the EOS directory to target
+* to setup the cron job:
+  * `acrontab -e`
+  * `59 23 * * * vocms0738 /bin/sh /afs/cern.ch/user/m/msuccarm/public/<shell_script_with_rsync_commands>`
+
 ### Online storage
 
 ROOT files generated in the Online DQM processing are stored here: `/data/dqmgui/files/`. We have 1.3T of storage available for this purpose. We will eventually fill this volume so mounting a little bit bigger disks is crucial for us in order to ensure that we never lose any Online archive data.
@@ -912,6 +967,10 @@ We still need to make sure that the DQM Offline data coming from `Reco`, `ReReco
 #### Temporary solution
 
 While we wait for Computing and MCM to change their tools to support the new file registration procedure, we could add a new daemon here: https://github.com/cms-DQM/dqmgui_prod/tree/index128/bin that will periodically check for newly uploaded ROOT files to the old DQM GUIs and forward them to the new DQM GUIs. This process has to be resilient to ensure stability and prevent file loss because ROOT files are deleted from the old DQM GUI after a while.
+  * After copying the files to EOS it's important to register them to the new GUI please use the python script at `/afs/cern.ch/user/m/msuccarm/public/checkFilesInGuiANDregister.py` or `/afs/cern.ch/user/j/jfernan/public/DQM/checkFilesInGuiANDregister.py`
+    * Please note that this script is also used to register files in local environments so check that you are sending requests to proper urls and not localhost. 
+    * Comment lines 33, 34, 40, and 65, and uncomment line 35 and 66 to send requests to an oficial Offline new DQM GUI.
+    * The server at which the registration happens is also different depending the URL used and registering can happen to production, testbed or test4. So double check the url used in line 35.
 
 ## Selecting the CMSSW version to build against
 
